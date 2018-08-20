@@ -1,0 +1,178 @@
+
+mkdir -p /data/software/mongodb_share/data/shard/db_rs0/data/rs0_0
+mkdir -p /data/software/mongodb_share/data/shard/db_rs0/data/rs0_1
+mkdir -p /data/software/mongodb_share/data/shard/db_rs0/data/rs0_2
+mkdir -p /data/software/mongodb_share/data/shard/db_rs0/data/logs
+mkdir -p /data/software/mongodb_share/config
+mkdir -p /data/software/mongodb_share/data/shard/db_rs1/data/rs1_0
+mkdir -p /data/software/mongodb_share/data/shard/db_rs1/data/rs1_2
+mkdir -p /data/software/mongodb_share/data/shard/db_rs1/data/rs1_1
+mkdir -p /data/software/mongodb_share/data/shard/db_rs1/data/logs
+mkdir -p /data/software/mongodb_share/data/shard/db_configs/data/db_config0
+mkdir -p /data/software/mongodb_share/data/shard/db_configs/data/logs
+mkdir -p /data/software/mongodb_share/data/shard/db_configs/data/db_config1
+mkdir -p /data/software/mongodb_share/data/shard/db_configs/data/db_config2
+mkdir -p /data/software/mongodb_share/data/shard/mongos/logs
+
+
+rs0_0.conf
+
+dbpath = /data/software/mongodb_share/data/shard/db_rs0/data/rs0_0 
+logpath = /data/software/mongodb_share/data/shard/db_rs0/data/logs/rs0_0.log 
+journal = true 
+port = 40000 
+replSet = rs0 
+shardsvr = true
+fork = true
+bind_ip = 0.0.0.0
+
+rs0_1.conf
+
+dbpath = /data/software/mongodb_share/data/shard/db_rs0/data/rs0_1
+logpath = /data/software/mongodb_share/data/shard/db_rs0/data/logs/rs0_1.log
+journal = true 
+port = 40001 
+replSet = rs0 
+shardsvr = true
+fork = true
+bind_ip = 0.0.0.0
+
+rs0_2.conf
+
+dbpath = /data/software/mongodb_share/data/shard/db_rs0/data/rs0_2
+logpath = /data/software/mongodb_share/data/shard/db_rs0/data/logs/rs0_2.log
+journal = true
+port = 40002
+replSet = rs0
+shardsvr = true
+fork = true
+bind_ip = 0.0.0.0
+
+mongod  --config /data/software/mongodb_share/config/rs0_0.conf
+
+//启动secondary节点
+mongod  --config /data/software/mongodb_share/config/rs0_1.conf
+
+//启动arbiter节点
+mongod  --config /data/software/mongodb_share/config/rs0_2.conf
+
+mongo --port 40000
+//查看情况，可以看到分片情况
+#rs.conf() 
+
+rs.initiate()
+rs.add("mtr:40001")
+rs.addArb("mtr:40002")
+
+rs1_0.conf
+
+dbpath = /data/software/mongodb_share/data/shard/db_rs1/data/rs1_0
+logpath = /data/software/mongodb_share/data/shard/db_rs1/data/logs/rs1_0.log
+journal = true
+port = 40003
+replSet = rs1
+shardsvr = true
+fork = true
+bind_ip = 0.0.0.0
+
+rs1_1.conf
+
+dbpath = /data/software/mongodb_share/data/shard/db_rs1/data/rs1_1
+logpath = /data/software/mongodb_share/data/shard/db_rs1/data/logs/rs1_1.log
+journal = true
+port = 40004
+replSet = rs1
+shardsvr = true
+fork = true
+bind_ip = 0.0.0.0
+
+rs1_2.conf
+
+dbpath = /data/software/mongodb_share/data/shard/db_rs1/data/rs1_2
+logpath = /data/software/mongodb_share/data/shard/db_rs1/data/logs/rs1_2.log
+journal = true
+port = 40005
+replSet = rs1
+shardsvr = true
+fork = true
+bind_ip = 0.0.0.0
+
+mongod  --config /data/software/mongodb_share/config/rs1_0.conf
+
+//启动secondary节点
+mongod  --config /data/software/mongodb_share/config/rs1_1.conf
+
+//启动arbiter节点（仲裁节点）
+mongod  --config /data/software/mongodb_share/config/rs1_2.conf
+
+mongo --port 40003
+
+rs.initiate()
+rs.add("mtr:40004")
+rs.addArb("mtr:40005")
+
+cfgserver_0.conf
+
+dbpath = /data/software/mongodb_share/data/shard/db_configs/data/db_config0
+logpath = /data/software/mongodb_share/data/shard/db_configs/data/logs/db_config0.log
+journal = true
+port = 40006
+configsvr = true
+replSet = rscfg
+fork = true
+bind_ip = 0.0.0.0
+
+cfgserver_1.conf
+
+dbpath = /data/software/mongodb_share/data/shard/db_configs/data/db_config1
+logpath = /data/software/mongodb_share/data/shard/db_configs/data/logs/db_config1.log
+journal = true
+port = 40007
+configsvr = true
+replSet = rscfg
+fork = true
+bind_ip = 0.0.0.0
+
+cfgserver_2.conf
+
+dbpath = /data/software/mongodb_share/data/shard/db_configs/data/db_config2
+logpath = /data/software/mongodb_share/data/shard/db_configs/data/logs/db_config2.log
+journal = true
+port = 40008
+configsvr = true
+replSet = rscfg
+fork = true
+bind_ip = 0.0.0.0
+
+mongod  --config /data/software/mongodb_share/config/cfgserver_0.conf
+
+mongod  --config /data/software/mongodb_share/config/cfgserver_1.conf
+
+mongod  --config /data/software/mongodb_share/config/cfgserver_2.conf
+
+mongo --port 40006
+rs.initiate()
+//注意：配置服务器的节点不能是arbiter
+rs.add("mtr:40007")
+rs.add("mtr:40008")
+
+cfg_mongos.conf
+
+logpath = /data/software/mongodb_share/data/shard/mongos/logs/mongos.log
+port = 40009
+configdb = rscfg/mtr:40006,mtr:40007,mtr:40008
+fork = true
+bind_ip = 0.0.0.0
+
+mongos  --config /data/software/mongodb_share/config/cfg_mongos.conf
+
+mongo --port 40009
+
+sh.addShard("rs0/mtr:40000,mtr:40001")
+sh.addShard("rs1/mtr:40003,mtr:40004")
+
+
+sh.enableSharding('test')
+use test
+db.comment.ensureIndex({'topicId': 1})
+sh.shardCollection('test.comment',{topicId:1})
