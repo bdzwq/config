@@ -1,0 +1,254 @@
+cluster.name: estest   集群名称
+node.name: “testanya”  节点名称
+
+node.master: false  是否主节点
+node.data: true   是否存储数据
+
+index.store.type: niofs 读写文件方式 
+index.cache.field.type: soft 缓存类型
+
+bootstrap.mlockall: true 禁用swap
+
+gateway.type: local 本地存储
+
+gateway.recover_after_nodes: 3 3个数据节点开始恢复
+
+gateway.recover_after_time: 5m 5分钟后开始恢复数据
+
+gateway.expected_nodes: 4 4个es节点开始恢复
+
+cluster.routing.allocation.node_initial_primaries_recoveries:8 并发恢复分片数 
+cluster.routing.allocation.node_concurrent_recoveries:2 同时recovery并发数
+
+indices.recovery.max_bytes_per_sec: 250mb 数据在节点间传输最大带宽 
+indices.recovery.concurrent_streams: 8 同时读取数据文件流线程
+
+discovery.zen.ping.multicast.enabled: false 禁用多播 
+discovery.zen.ping.unicast.hosts:[“192.168.169.11:9300”, “192.168.169.12:9300”]
+
+discovery.zen.fd.ping_interval: 10s 节点间存活检测间隔 
+discovery.zen.fd.ping_timeout: 120s 存活超时时间 
+discovery.zen.fd.ping_retries: 6 存活超时重试次数
+
+http.cors.enabled: true 使用监控
+
+index.analysis.analyzer.ik.type:”ik” ik分词
+
+thread pool setting
+
+threadpool.index.type: fixed 写索引线程池类型 
+threadpool.index.size: 64 线程池大小（建议2~3倍cpu数） 
+threadpool.index.queue_size: 1000 队列大小
+
+threadpool.search.size: 64 搜索线程池大小 
+threadpool.search.type: fixed 搜索线程池类型 
+threadpool.search.queue_size: 1000 队列大小
+
+threadpool.get.type: fixed 取数据线程池类型 
+threadpool.get.size: 32 取数据线程池大小 
+threadpool.get.queue_size: 1000 队列大小
+
+threadpool.bulk.type: fixed 批量请求线程池类型 
+threadpool.bulk.size: 32 批量请求线程池大小 
+threadpool.bulk.queue_size: 1000 队列大小
+
+threadpool.flush.type: fixed 刷磁盘线程池类型 
+threadpool.flush.size: 32 刷磁盘线程池大小 
+threadpool.flush.queue_size: 1000 队列大小
+
+indices.store.throttle.type: merge 
+indices.store.throttle.type: none 写磁盘类型 
+indices.store.throttle.max_bytes_per_sec:500mb 写磁盘最大带宽
+
+index.merge.scheduler.max_thread_count: 8 索引merge最大线程数 
+index.translog.flush_threshold_size:600MB 刷新translog文件阀值
+
+cluster.routing.allocation.node_initial_primaries_recoveries:8 并发恢复分片数 
+cluster.routing.allocation.node_concurrent_recoveries:2 同时recovery并发数
+
+使用bulk API 增加入库速度 
+初次索引的时候，把 replica 设置为 0 
+增大 threadpool.index.queue_size 1000 
+增大 indices.memory.index_buffer_size: 20% 
+index.translog.durability: async –这个可以异步写硬盘，增大写的速度 
+增大 index.translog.flush_threshold_size: 600MB 
+增大 index.translog.flush_threshold_ops: 500000
+
+复制代码
+curl -XPOST '127.0.0.1:9200/_cluster/settings' -d '{
+    "transient" : 
+        {
+          "index.indexing.slowlog.threshold.index.warn": "10s",
+            "index.indexing.slowlog.threshold.index.info": "5s",
+            "index.indexing.slowlog.threshold.index.debug": "2s",
+            "index.indexing.slowlog.threshold.index.trace": "500ms",
+            "index.indexing.slowlog.level": "info",
+            "index.indexing.slowlog.source": "1000",
+            "indices.memory.index_buffer_size": "20%"
+        }
+
+}'
+复制代码
+复制代码
+curl -XPOST '127.0.0.1:9200/_cluster/settings' -d '{
+    "transient" : 
+        {
+          "index.search.slowlog.threshold.query.warn": "10s",
+        "index.search.slowlog.threshold.query.info": "5s",
+        "index.search.slowlog.threshold.query.debug": "2s",
+        "index.search.slowlog.threshold.query.trace": "500ms",
+        "index.search.slowlog.threshold.fetch.warn": "1s",
+        "index.search.slowlog.threshold.fetch.info": "800ms",
+        "index.search.slowlog.threshold.fetch.debug": "500ms",
+        "index.search.slowlog.threshold.fetch.trace": "200ms"
+        }
+
+}'
+复制代码
+–节点下线时，把所有后缀为 -2的从集群中排除
+
+curl -XPUT   http://127.0.0.1:9200/_cluster/settings
+{ "transient" : 
+      {"cluster.routing.allocation.enable" : "all",            "cluster.routing.allocation.exclude._name":".*-2"}
+  }
+复制代码
+curl -XPUT ip:9200/_cluster/settings -d
+'{
+    "transient": {
+        "logger.discover": "DEBUG" 
+    }
+    "persistent": {
+        "discovery.zen.minimum_master_nodes": 2
+    }
+}'
+复制代码
+—批量指定节点下线
+
+curl -XPUT 127.0.0.1:9200/_cluster/settings -d '{
+    "transient": {
+        "cluster.routing.allocation.exclude._name": "atest11-2,atest12-2,anatest13-2,antest14-2" 
+    }
+
+}'
+curl -XPUT 127.0.0.1:9200/_cluster/settings -d '{
+    "transient": {
+        "cluster.routing.allocation.exclude._name": "test_aa73_2,test_aa73" 
+    }
+
+}'
+curl -XPUT 127.0.0.1:9200/_cluster/settings -d '{
+    "transient": {
+        "cluster.routing.allocation.exclude._name": "" 
+    }
+
+}'
+curl -XPUT 127.0.0.1:9200/_cluster/settings -d '{
+    "transient": {
+        "cluster.routing.allocation.cluster_concurrent_rebalance": 10
+    }
+
+}'
+复制代码
+curl -XPUT 127.0.0.1:9200/_cluster/settings -d '{
+    "transient": {
+        "indices.store.throttle.type": "none",
+         "index.store.type": "niofs",
+         "index.cache.field.type": "soft",
+         "indices.store.throttle.max_bytes_per_sec": "500mb",
+          "index.translog.flush_threshold_size": "600MB",
+         "threadpool.flush.type": "fixed",
+        "threadpool.flush.size": 32,
+       "threadpool.flush.queue_size": 1000
+    }
+
+}'
+复制代码
+curl -XPUT 127.0.0.1:9200/_cluster/settings -d '{
+    "transient": {
+        "index.indexing.slowlog.level": "warn" 
+    }
+
+}'
+复制代码
+curl -XGET 127.0.0.1:9200/_cluster/health?level=shards
+
+curl -XGET 127.0.0.1:9200/_cluster/settings?pretty
+
+curl -XGET 127.0.0.1:9200/_cluster/pending_tasks?pretty
+
+curl -XGET 127.0.0.1:9200/_cat/aliases
+
+curl -XGET 127.0.0.1:9200/_cat/plugins
+
+curl -XGET 127.0.0.1:9200/_cat/nodes
+
+/_cat/allocation 
+/_cat/shards 
+/_cat/shards/{index} 
+/_cat/master 
+/_cat/nodes 
+/_cat/indices 
+/_cat/indices/{index} 
+/_cat/segments 
+/_cat/segments/{index} 
+/_cat/count 
+/_cat/count/{index} 
+/_cat/recovery 
+/_cat/recovery/{index} 
+/_cat/health 
+/_cat/pending_tasks 
+/_cat/aliases 
+/_cat/aliases/{alias} 
+/_cat/thread_pool 
+/_cat/plugins 
+/_cat/fielddata 
+/_cat/fielddata/{fields}
+复制代码
+复制代码
+shard的移动
+curl -XPOST 'localhost:9200/_cluster/reroute' -d '{
+    "commands" : [ {
+        "move" :
+            {
+              "index" : "test_aa_20160529", "shard" : 4,
+              "from_node" : "node1", "to_node" : "node2"
+            }
+        },
+        {
+          "allocate" : {
+              "index" : "test", "shard" : 1, "node" : "node3"
+          }
+        }
+    ]
+}'
+复制代码
+curl -XPUT 127.0.0.1:9200/_cluster/settings -d '
+{
+  "transient": {
+    "logger.indices.recovery": "DEBUG"
+  }
+}'
+curl -XPUT 127.0.0.1:9200/_cluster/settings -d '
+{
+  "transient": {
+    "cluster.routing.allocation.node_initial_primaries_recoveries": "100" 
+  }
+}'
+复制代码
+curl -XPOST '127.0.0.1:9200/_cluster/settings' -d '{
+    "transient" : 
+        {
+            "indices.memory.index_buffer_size": "20%"
+        }
+
+}'
+复制代码
+复制代码
+curl -XPOST '127.0.0.1:9200/_cluster/settings' -d '{
+    "transient" : 
+        {
+          "index.indexing.slowlog.level" :   "info" 
+        }
+
+}'
+复制代码
